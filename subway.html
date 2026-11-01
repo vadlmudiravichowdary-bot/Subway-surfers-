@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BHASKAR SURFERS</title>
+<style>
+body{margin:0;overflow:hidden;background:#333;font-family:Arial;touch-action:none}
+#game{width:100vw;height:100vh;position:relative;background:linear-gradient(#444, #111);overflow:hidden;perspective:800px}
+.lane{position:absolute;top:0;bottom:0;width:33.33%;border-right:2px dashed #555}
+#lane0{left:0} #lane1{left:33.33%} #lane2{left:66.66%}
+#player{width:60px;height:80px;background:radial-gradient(yellow, orange);border-radius:20px 20px 10px 10px;position:absolute;bottom:100px;border:3px solid red;z-index:10;display:flex;align-items:center;justify-content:center;font-size:35px;transition:left 0.2s ease-out, bottom 0.3s}
+.train{width:33.33%;height:100px;background:linear-gradient(#ff3333, #990000);position:absolute;border:3px solid black;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;color:white}
+.coin{width:35px;height:35px;background:radial-gradient(gold, orange);border-radius:50%;position:absolute;border:2px solid white;box-shadow:0 0 10px gold;z-index:5}
+#score{position:fixed;top:15px;left:15px;color:white;font-size:28px;font-weight:bold;z-index:20;text-shadow:2px 2px 0 black}
+#coins{position:fixed;top:15px;right:15px;color:gold;font-size:26px;font-weight:bold;z-index:20}
+#controls{position:fixed;bottom:20px;width:100%;display:flex;justify-content:space-around;z-index:20}
+.btn{width:80px;height:80px;background:rgba(255,255,255,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;border:3px solid white}
+</style>
+</head>
+<body>
+<div id="score">0</div><div id="coins">💰 0</div>
+<div id="game">
+<div class="lane" id="lane0"></div><div class="lane" id="lane1"></div><div class="lane" id="lane2"></div>
+<div id="player">😎</div>
+</div>
+<div id="controls"><div class="btn" onclick="move(-1)">⬅️</div><div class="btn" onclick="jump()">⬆️</div><div class="btn" onclick="move(1)">➡️</div></div>
+<script>
+let player=document.getElementById('player'), game=document.getElementById('game');
+let lane=1, jumping=false, score=0, coinCount=0, speed=4;
+let lanes=[16.66, 50, 83.33]; // center % of each lane
+let obstacles=[];
+
+function updatePlayerPos(){
+ player.style.left=`calc(${lanes[lane]}% - 30px)`;
+ if(!jumping) player.style.bottom='100px';
+}
+updatePlayerPos();
+
+function move(dir){
+ lane=Math.max(0, Math.min(2, lane+dir));
+ updatePlayerPos();
+}
+
+function jump(){
+ if(jumping) return;
+ jumping=true;
+ player.style.bottom='220px';
+ setTimeout(()=>{ player.style.bottom='100px'; jumping=false; },600);
+}
+
+let lastSpawn=0;
+function spawn(){
+ let type=Math.random()>0.5?'train':'coin';
+ let l=Math.floor(Math.random()*3);
+ let el=document.createElement('div');
+ el.className=type;
+ if(type==='train'){ el.innerText='🚃'; el.style.left=`${l*33.33}%`; }
+ else{ el.innerText=''; el.style.left=`calc(${lanes[l]}% - 17px)`; }
+ el.style.top='-120px';
+ game.appendChild(el);
+ obstacles.push({el, lane:l, y:-120, type});
+}
+
+function loop(){
+ score+=1; document.getElementById('score').innerText=score;
+ if(Date.now()-lastSpawn>900){ spawn(); lastSpawn=Date.now(); if(speed<12) speed+=0.05; }
+ obstacles.forEach((o,i)=>{
+  o.y+=speed; o.el.style.top=o.y+'px';
+  // Collision
+  if(o.y>window.innerHeight-200 && o.y<window.innerHeight-80){
+   if(o.lane===lane){
+    if(o.type==='train' && !jumping){ alert('OUT RA BHASKAR! 💥\nSCORE: '+score+'\nCOINS: '+coinCount); location.reload(); }
+    if(o.type==='coin'){ o.el.remove(); obstacles.splice(i,1); coinCount++; document.getElementById('coins').innerText='💰 '+coinCount; }
+   }
+  }
+  if(o.y>window.innerHeight+50){ o.el.remove(); obstacles.splice(i,1); }
+ });
+ requestAnimationFrame(loop);
+}
+loop();
+
+// Swipe control
+let startX=0;
+document.addEventListener('touchstart', e=>startX=e.touches[0].clientX);
+document.addEventListener('touchend', e=>{
+ let diff=e.changedTouches[0].clientX-startX;
+ if(Math.abs(diff)>50){ move(diff>0?1:-1); }
+ else { jump(); }
+});
+document.addEventListener('keydown', e=>{
+ if(e.key==='ArrowLeft') move(-1);
+ if(e.key==='ArrowRight') move(1);
+ if(e.key==='ArrowUp' || e.key===' ') jump();
+});
+</script>
+</body>
+</html>
